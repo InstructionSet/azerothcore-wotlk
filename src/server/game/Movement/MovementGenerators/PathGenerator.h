@@ -81,6 +81,8 @@ class PathGenerator
         void SetUseStraightPath(bool useStraightPath) { _useStraightPath = useStraightPath; }
         void SetPathLengthLimit(float distance) { _pointPathLimit = std::min<uint32>(uint32(distance/SMOOTH_PATH_STEP_SIZE), MAX_POINT_PATH_LENGTH); }
         void SetUseRaycast(bool useRaycast) { _useRaycast = useRaycast; }
+        void SetTraceEnabled(bool trace) { _traceEnabled = trace; }
+        [[nodiscard]] uint32 GetTraceId() const { return _traceId; }
 
         // result getters
         [[nodiscard]] G3D::Vector3 const& GetStartPosition() const { return _startPosition; }
@@ -139,6 +141,8 @@ class PathGenerator
         bool _slopeCheck;       // when set, it skips paths with too high slopes (doesn't work with _useStraightPath)
         uint32 _pointPathLimit; // limit point path size; min(this, MAX_POINT_PATH_LENGTH)
         bool _useRaycast;       // use raycast if true for a straight line path
+        bool     _traceEnabled; // when set, emits LOG_DEBUG("pathtrace") decision trace keyed by _traceId
+        uint32   _traceId;      // monotonic ID stamped at CalculatePath entry; links all trace logs for this call
 
         G3D::Vector3 _startPosition;        // {x, y, z} of current location
         G3D::Vector3 _endPosition;          // {x, y, z} of the destination

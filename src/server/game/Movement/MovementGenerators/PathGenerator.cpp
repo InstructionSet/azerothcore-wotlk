@@ -23,13 +23,24 @@
 #include "MMapMgr.h"
 #include "Map.h"
 #include "Metric.h"
+#include <atomic>
+
+// Monotonic counter used to correlate pathtrace log lines from one CalculatePath call.
+static std::atomic<uint32> s_pathTraceId{0};
+
+// Emit a LOG_DEBUG("pathtrace",...) line prefixed with the call's unique trace ID.
+// All decision points in one CalculatePath call share the same ID so a simple
+// grep "[#1234]" reconstructs the full decision tree for that path.
+// Zero cost when pathtrace logging is disabled or _traceEnabled is false.
+#define PTRACE(fmt, ...) \
+    do { if (_traceEnabled) LOG_DEBUG("pathtrace", "[#{}] " fmt, _traceId, ##__VA_ARGS__); } while (0)
 
  ////////////////// PathGenerator //////////////////
 PathGenerator::PathGenerator(WorldObject const* owner) :
     _polyLength(0), _type(PATHFIND_BLANK), _useStraightPath(false), _forceDestination(false),
     _slopeCheck(false), _pointPathLimit(MAX_POINT_PATH_LENGTH), _useRaycast(false),
     _endPosition(G3D::Vector3::zero()), _source(owner), _navMesh(nullptr),
-    _navMeshQuery(nullptr)
+    _navMeshQuery(nullptr), _traceEnabled(false), _traceId(0)
 {
     memset(_pathPolyRefs, 0, sizeof(_pathPolyRefs));
 
@@ -69,12 +80,20 @@ bool PathGenerator::CalculatePath(float x, float y, float z, float destX, float 
 
     _forceDestination = forceDest;
 
+    if (_traceEnabled)
+    {
+        _traceId = ++s_pathTraceId;
+        LOG_DEBUG("pathtrace", "[#{}] INIT src={} from=({:.1f},{:.1f},{:.1f}) to=({:.1f},{:.1f},{:.1f}) dist={:.1f}",
+            _traceId, _source->GetGUID().ToString(), x, y, z, destX, destY, destZ, (dest - start).length());
+    }
+
     // make sure navMesh works - we can run on map w/o mmap
     // check if the start and end point have a .mmtile loaded (can we pass via not loaded tile on the way?)
     Unit const* _sourceUnit = _source->ToUnit();
     if (!_navMesh || !_navMeshQuery || (_sourceUnit && _sourceUnit->HasUnitState(UNIT_STATE_IGNORE_PATHFINDING)) ||
         !HaveTile(start) || !HaveTile(dest))
     {
+        PTRACE("NO_NAVMESH type=NORMAL|NOT_USING_PATH");
         BuildShortcut();
         _type = PathType(PATHFIND_NORMAL | PATHFIND_NOT_USING_PATH);
         return true;
@@ -167,6 +186,10 @@ void PathGenerator::BuildPolyPath(G3D::Vector3 const& startPos, G3D::Vector3 con
     dtPolyRef startPoly = GetPolyByLocation(startPoint, &distToStartPoly);
     dtPolyRef endPoly = GetPolyByLocation(endPoint, &distToEndPoly);
 
+    PTRACE("POLY_SEARCH startPoly={} startDist={:.2f} endPoly={} endDist={:.2f}",
+        startPoly != INVALID_POLYREF ? "FOUND" : "INVALID", distToStartPoly,
+        endPoly   != INVALID_POLYREF ? "FOUND" : "INVALID", distToEndPoly);
+
     _type = PathType(PATHFIND_NORMAL);
 
     Creature const* creature = _source->ToCreature();
@@ -177,6 +200,10 @@ void PathGenerator::BuildPolyPath(G3D::Vector3 const& startPos, G3D::Vector3 con
     if (startPoly == INVALID_POLYREF || endPoly == INVALID_POLYREF)
     {
         BuildShortcut();
+        PTRACE("SHORTCUT reason={} canFly={} canSwim={}",
+            startPoly == INVALID_POLYREF ? "no_start_poly" : "no_end_poly",
+            creature ? creature->CanFly() : true,
+            creature ? creature->CanSwim() : true);
 
         bool canSwim = creature ? creature->CanSwim() : true;
         bool path = creature ? creature->CanFly() : true;
@@ -231,6 +258,7 @@ void PathGenerator::BuildPolyPath(G3D::Vector3 const& startPos, G3D::Vector3 con
         if (buildShortcut)
         {
             BuildShortcut();
+            PTRACE("SHORTCUT reason=far_from_poly startFar={} endFar={}", startFarFromPoly, endFarFromPoly);
             _type = PathType(PATHFIND_NORMAL | PATHFIND_NOT_USING_PATH);
 
             AddFarFromPolyFlags(startFarFromPoly, endFarFromPoly);
@@ -248,6 +276,7 @@ void PathGenerator::BuildPolyPath(G3D::Vector3 const& startPos, G3D::Vector3 con
             }
 
             _type = PathType(PATHFIND_INCOMPLETE);
+            PTRACE("FAR_FROM_POLY startFar={} endFar={} type=INCOMPLETE", startFarFromPoly, endFarFromPoly);
 
             AddFarFromPolyFlags(startFarFromPoly, endFarFromPoly);
         }
@@ -509,6 +538,7 @@ void PathGenerator::BuildPolyPath(G3D::Vector3 const& startPos, G3D::Vector3 con
     }
 
     AddFarFromPolyFlags(startFarFromPoly, endFarFromPoly);
+    PTRACE("ASTAR polyCount={} type={:#04x}", _polyLength, (uint32)_type);
 
     // generate the point-path out of our up-to-date poly-path
     BuildPointPath(startPoint, endPoint);
@@ -599,6 +629,8 @@ void PathGenerator::BuildPointPath(const float* startPoint, const float* endPoin
 
     // first point is always our current location - we need the next one
     SetActualEndPosition(_pathPoints[pointCount - 1]);
+    PTRACE("POINTS count={} actualEnd=({:.1f},{:.1f},{:.1f}) type={:#04x}",
+        pointCount, _actualEndPosition.x, _actualEndPosition.y, _actualEndPosition.z, (uint32)_type);
 
     // force the given destination, if needed
     if (_forceDestination &&
