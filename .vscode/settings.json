@@ -124,10 +124,15 @@
     "deno.enable": true,
     "deno.path": "deps/deno/bin/deno",
     "deno.lint": true,
-    "C_Cpp.default.compileCommands": "${workspaceFolder}/build/compile_commands.json",
+    "C_Cpp.default.compileCommands": "D:/Data/AC/build/compile_commands.json",
     "C_Cpp.default.cppStandard": "c++20",
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
     "C_Cpp.default.compilerPath": "/usr/bin/clang",
+    "C_Cpp.default.includePath": [
+        "${workspaceFolder}/**",
+        "C:/local/boost_1_89_0"
+    ],
     "cmake.sourceDirectory": ["${workspaceFolder}"],
-    "cmake.buildDirectory": "${workspaceFolder}/var/build",
+    "cmake.buildDirectory": "D:/Data/AC/build",
+    "git.scanRepositories": ["modules/mod-playerbots"],
 }

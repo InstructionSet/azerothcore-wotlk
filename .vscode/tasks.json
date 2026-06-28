@@ -49,6 +49,28 @@
         "problemMatcher": []
       },
       {
+        "label": "AzerothCore: Build (Windows)",
+        "type": "shell",
+        "command": "cmake --build D:/Data/AC/build --config RelWithDebInfo --parallel -- /p:VCToolsVersion=14.44.35207",
+        "group": "build",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        },
+        "problemMatcher": "$msCompile"
+      },
+      {
+        "label": "AzerothCore: Reconfigure (Windows)",
+        "type": "shell",
+        "command": "cmake -S D:/Data/AC/src -B D:/Data/AC/build -DCMAKE_GENERATOR_INSTANCE=\"C:/Program Files/Microsoft Visual Studio/2022/Community\"",
+        "group": "build",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
         "label": "AzerothCore: Check codestyle cpp",
         "type": "shell",
         "command": "python apps/codestyle/codestyle-cpp.py",

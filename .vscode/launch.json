@@ -2,6 +2,27 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Windows: Debug worldserver",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "D:/Data/AC/build/bin/RelWithDebInfo/worldserver.exe",
+            "cwd": "D:/Data/AC/build/bin/RelWithDebInfo",
+            "args": [],
+            "environment": [],
+            "externalConsole": true,
+            "preLaunchTask": "AzerothCore: Build (Windows)"
+        },
+        {
+            "name": "Windows: Debug authserver",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "D:/Data/AC/build/bin/RelWithDebInfo/authserver.exe",
+            "cwd": "D:/Data/AC/build/bin/RelWithDebInfo",
+            "args": [],
+            "environment": [],
+            "externalConsole": true
+        },
+        {
             "name": "Linux/Docker debug",
             "type": "cppdbg",
             "request": "launch",
@@ -63,6 +84,16 @@
                 "MIMode": "gdb",
                 "miDebuggerPath": "C:\\MinGw\\bin\\gdb.exe"
             }
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Windows: Launch authserver + worldserver",
+            "configurations": [
+                "Windows: Debug authserver",
+                "Windows: Debug worldserver"
+            ],
+            "preLaunchTask": "AzerothCore: Build (Windows)"
         }
     ]
 }
