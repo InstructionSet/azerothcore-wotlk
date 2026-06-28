@@ -356,8 +356,11 @@ std::string Metric::FormatInfluxDBValue(float value)
 
 std::string Metric::FormatInfluxDBTagValue(std::string const& value)
 {
-    /// @todo: should handle '=' and ',' characters too
-    return boost::replace_all_copy(value, " ", "\\ ");
+    std::string escaped = boost::replace_all_copy(value, "\\", "\\\\");
+    escaped = boost::replace_all_copy(escaped, " ", "\\ ");
+    escaped = boost::replace_all_copy(escaped, ",", "\\,");
+    escaped = boost::replace_all_copy(escaped, "=", "\\=");
+    return escaped;
 }
 
 std::string Metric::FormatInfluxDBValue(std::chrono::nanoseconds value)
